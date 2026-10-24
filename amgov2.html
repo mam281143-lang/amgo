@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Amigo FDJ — OCR Photo + Générateur</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0f1a;--panel:#141c2e;--panel2:#1a2438;--border:#2a3550;--accent:#60a5fa;--accentd:#3b82f6;--text:#e8eef8;--dim:#8899b8;--ok:#4ade80;--err:#f87171;--warn:#facc15;--gold:#fbbf24}
+body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:linear-gradient(180deg,#0a0f1a,#101828);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
+.container{max-width:1100px;width:100%}
+header{text-align:center;margin-bottom:1.5rem}
+h1{font-size:1.9rem;font-weight:700;background:linear-gradient(90deg,#60a5fa,#a78bfa,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.subtitle{color:var(--dim);font-size:.85rem;margin-top:.3rem}
+.warn-box{background:#2a1f10;border-left:4px solid var(--gold);padding:.9rem 1.1rem;border-radius:10px;font-size:.8rem;color:#fcd34d;margin:1.2rem 0;line-height:1.5}
+.warn-box strong{color:#fbbf24}
+.section-title{font-size:.85rem;color:var(--accentd);text-transform:uppercase;letter-spacing:.1em;margin:1.5rem 0 .8rem;font-weight:800}
+.btn{padding:1rem 2rem;background:linear-gradient(90deg,#3b82f6,#8b5cf6);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .1s,box-shadow .2s;width:100%;font-family:inherit;box-shadow:0 4px 20px rgba(59,130,246,.3)}
+.btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 30px rgba(59,130,246,.5)}
+.btn:active:not(:disabled){transform:scale(.98)}
+.btn:disabled{background:#333;color:#666;cursor:not-allowed;box-shadow:none}
+.btn-secondary{background:#2a3550;color:var(--text);box-shadow:none}
+.btn-small{padding:.6rem 1rem;font-size:.85rem;width:auto}
+.btn-gold{background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#0a0f1a;box-shadow:0 4px 20px rgba(251,191,36,.4)}
+.btn-gold:hover:not(:disabled){box-shadow:0 6px 30px rgba(251,191,36,.6)}
+textarea{width:100%;padding:.8rem 1rem;border-radius:10px;border:1px solid var(--border);background:#0d1420;color:var(--text);font-family:ui-monospace,monospace;font-size:.85rem;min-height:120px;resize:vertical}
+textarea:focus{outline:none;border-color:var(--accentd)}
+input[type=text],input[type=password]{width:100%;padding:.8rem 1rem;border-radius:10px;border:1px solid var(--border);background:#0d1420;color:var(--text);font-family:inherit;font-size:.9rem}
+input:focus{outline:none;border-color:var(--accentd)}
+label{display:block;font-size:.78rem;color:var(--dim);margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.options-row{display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap}
+.options-row>*{flex:1;min-width:180px}
+.upload-area{background:var(--panel);border:3px dashed var(--border);border-radius:16px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:1rem}
+.upload-area:hover,.upload-area.dragover{border-color:var(--accentd);background:#152040}
+.upload-area input[type=file]{display:none}
+.upload-icon{font-size:2.5rem;margin-bottom:.6rem}
+.upload-text{font-size:1rem;color:var(--text);margin-bottom:.3rem}
+.upload-hint{font-size:.75rem;color:var(--dim)}
+.previews{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.6rem;margin:1rem 0}
+.preview-item{position:relative;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;aspect-ratio:1}
+.preview-item img{width:100%;height:100%;object-fit:cover}
+.preview-item .remove{position:absolute;top:4px;right:4px;background:rgba(248,113,113,.9);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-weight:700;font-size:.75rem}
+.settings-toggle{background:transparent;border:1px solid var(--border);color:var(--dim);padding:.5rem 1rem;border-radius:20px;font-size:.8rem;cursor:pointer;margin-bottom:1rem}
+.settings-toggle:hover{border-color:var(--accentd);color:var(--accent)}
+.settings-panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:1.25rem;margin-bottom:1.5rem;display:none}
+.settings-panel.visible{display:block}
+.grid-amigo{display:grid;grid-template-columns:repeat(7,1fr);gap:.5rem;margin:1rem 0}
+@media(max-width:500px){.grid-amigo{grid-template-columns:repeat(4,1fr)}}
+.num-btn{aspect-ratio:1;border-radius:50%;border:2px solid var(--border);background:var(--panel2);color:var(--text);font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center;position:relative}
+.num-btn:hover{border-color:var(--accentd);transform:scale(1.08)}
+.num-btn.selected{background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-color:#a78bfa;color:#fff;transform:scale(1.05)}
+.num-btn.hot{border-color:var(--gold);box-shadow:0 0 12px rgba(251,191,36,.5)}
+.grille-finale{background:linear-gradient(135deg,#1e3a8a,#4c1d95);border:3px solid var(--gold);border-radius:20px;padding:1.5rem;margin:1.5rem 0;text-align:center}
+.grille-finale h3{color:var(--gold);font-size:.85rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1rem}
+.boules{display:flex;flex-wrap:wrap;gap:.6rem;justify-content:center;margin:1rem 0}
+.boule{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:#fff;box-shadow:0 4px 15px rgba(0,0,0,.4);animation:pop .4s ease-out}
+.boule.bleu{background:linear-gradient(135deg,#2563eb,#3b82f6)}
+.boule.jaune{background:linear-gradient(135deg,#d97706,#fbbf24);color:#0a0f1a}
+@keyframes pop{0%{transform:scale(0);opacity:0}80%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.6rem;margin:1rem 0}
+.stat-card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:.7rem;text-align:center}
+.stat-card .n{font-size:1.5rem;font-weight:800;color:var(--accent)}
+.stat-card .lbl{font-size:.68rem;color:var(--dim);margin-top:.2rem}
+.stat-card.top{border-color:var(--gold);background:linear-gradient(135deg,#2a1f10,#3a2a12)}
+.stat-card.top .n{color:var(--gold)}
+.tabs{display:flex;gap:.4rem;margin:1rem 0;flex-wrap:wrap}
+.tab{padding:.5rem 1rem;background:var(--panel);border:1px solid var(--border);border-radius:20px;font-size:.8rem;cursor:pointer;color:var(--dim);font-family:inherit}
+.tab.active{background:var(--accentd);border-color:var(--accentd);color:#fff;font-weight:700}
+.hidden{display:none!important}
+.log-box{margin-top:1rem;padding:.75rem;background:#0a0f1a;border-radius:10px;border:1px solid #1a2438;font-family:ui-monospace,monospace;font-size:.72rem;color:#8899b8;max-height:200px;overflow-y:auto}
+.log-box div{padding:1px 0}
+.log-box .ok{color:var(--ok)}
+.log-box .err{color:var(--err)}
+.log-box .warn{color:var(--warn)}
+.log-box .hl{color:var(--accent)}
+.mode-info{background:var(--panel2);border-left:4px solid var(--accent);padding:.8rem 1rem;border-radius:10px;font-size:.78rem;color:var(--text);margin-bottom:1rem;line-height:1.5}
+.info-line{display:flex;gap:.5rem;font-size:.75rem;color:var(--dim);margin-top:.5rem;flex-wrap:wrap;align-items:center}
+.info-line span{background:var(--panel2);padding:.2rem .5rem;border-radius:6px}
+.status-line{font-size:.85rem;color:var(--accent);margin-bottom:1rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.status-line .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>🎰 Amigo FDJ — OCR Photo + Générateur</h1>
+<p class="subtitle">Importe tes tirages par photo · Génère 4 chauds + 3 aléatoires</p>
+</header>
+
+<div class="warn-box">
+⚠️ <strong>Important :</strong> Chaque tirage Amigo est <strong>indépendant et aléatoire</strong>. Les numéros "chauds" n'ont <strong>pas plus de chances</strong> de sortir que les autres. Cet outil t'aide juste à construire une grille logique à partir de ton historique. Joue uniquement de l'argent que tu peux perdre.
+</div>
+
+<button class="settings-toggle" onclick="document.getElementById('settings-panel').classList.toggle('visible')">⚙️ Paramètres API</button>
+<div id="settings-panel" class="settings-panel">
+<label for="api-key-input">Clé API Agnes AI (pour l'OCR photo)</label>
+<div class="options-row" style="margin-bottom:0">
+<input type="password" id="api-key-input" placeholder="sk-...">
+<button class="btn btn-small" onclick="saveApiKey()" style="flex:0">Sauvegarder</button>
+</div>
+<p style="font-size:.75rem;color:var(--dim);margin-top:.5rem">Utilisée uniquement pour lire les numéros sur tes photos. Stockée dans ton navigateur.</p>
+</div>
+
+<div class="section-title">📸 Étape 1 — Importe tes photos de tirages</div>
+<div class="mode-info">
+Importe des captures d'écran de l'appli FDJ, des photos de journaux ou de tickets. Agnes 2.5 Flash lit les numéros automatiquement.
+</div>
+
+<div class="upload-area" id="upload-area">
+<input type="file" id="file-input" accept="image/*" multiple>
+<div class="upload-icon">📸</div>
+<div class="upload-text">Appuie pour importer tes photos</div>
+<div class="upload-hint">JPG, PNG, WEBP · Plusieurs images acceptées</div>
+</div>
+
+<div id="previews" class="previews"></div>
+
+<button class="btn" id="ocr-btn" onclick="lancerOCR()" disabled>🔍 Lire les numéros sur les photos</button>
+
+<div id="status-panel" class="hidden" style="margin-top:1.5rem">
+<div class="status-line">
+<span class="dot"></span>
+<span id="global-status-text">Initialisation…</span>
+</div>
+</div>
+
+<div class="section-title" style="margin-top:2rem">📝 Étape 2 — Historique des tirages</div>
+<div class="mode-info" style="border-left-color:#8b5cf6">
+Les numéros extraits des photos sont ajoutés ici automatiquement. Tu peux aussi coller ton historique manuellement (un tirage par ligne).<br>
+Format : <code style="background:#0d1420;padding:.15rem .4rem;border-radius:4px;color:#a78bfa">7 12 15 21 24 27 3</code>
+</div>
+<textarea id="historique" placeholder="7 12 15 21 24 27 3
+5 9 14 18 22 26 28
+2 8 11 17 20 25 1"></textarea>
+<div class="info-line">
+<span id="histo-count">0 tirage chargé</span>
+<span id="histo-top" style="color:var(--gold)">🔥 Top chauds : —</span>
+<button class="btn btn-small btn-secondary" onclick="parseHistorique()" style="margin-left:auto">🔄 Analyser</button>
+<button class="btn btn-small btn-secondary" onclick="clearAll()">🗑️ Effacer</button>
+</div>
+
+<div class="section-title">🚫 Étape 3 — Numéros à exclure (optionnel)</div>
+<input type="text" id="exclus" placeholder="ex: 1, 13, 28">
+
+<div class="section-title">⚙️ Étape 4 — Stratégie de génération</div>
+<div class="options-row">
+<div>
+<label for="nb-chauds">🔥 Chaleur</label>
+<select id="nb-chauds">
+<option value="3">3 chauds + 4 aléatoires</option>
+<option value="4" selected>4 chauds + 3 aléatoires</option>
+<option value="5">5 chauds + 2 aléatoires</option>
+<option value="7">7 chauds (les plus fréquents)</option>
+<option value="0">0 chaud + 7 aléatoires</option>
+</select>
+</div>
+<div>
+<label for="nb-grilles">🎲 Nombre de grilles</label>
+<select id="nb-grilles">
+<option value="1" selected>1 grille</option>
+<option value="3">3 grilles</option>
+<option value="5">5 grilles</option>
+<option value="10">10 grilles</option>
+</select>
+</div>
+</div>
+
+<button class="btn btn-gold" onclick="genererGrilles()">🎯 Générer mes grilles Amigo</button>
+
+<div class="section-title" style="margin-top:2rem">🎰 Grille manuelle (clic sur les numéros)</div>
+<div id="grille-manuelle" class="grid-amigo"></div>
+<div class="info-line">
+<span id="sel-count">0 / 7 sélectionnés</span>
+<button class="btn btn-small btn-secondary" onclick="resetSelection()" style="margin-left:auto">🔄 Reset</button>
+</div>
+
+<div id="results-panel" class="hidden" style="margin-top:2rem">
+<div class="section-title">🏆 Grilles générées</div>
+<div id="grilles-container"></div>
+
+<div class="tabs">
+<button class="tab active" onclick="switchTab('stats',this)">📊 Stats numéros</button>
+<button class="tab" onclick="switchTab('paires',this)">🔗 Paires fréquentes</button>
+</div>
+
+<div id="tab-stats"><div class="stats-grid" id="stats-nums"></div></div>
+<div id="tab-paires" class="hidden"><div id="paires-list"></div></div>
+</div>
+
+<div id="log-box" class="log-box"></div>
+</div>
+
+<script>
+// ============ CONFIG AGNES ============
+var DEFAULT_API_KEY = "sk-DZ8qTzDZ9fWahefwquW7I3a0acKnlVCP7trguNigNJrQgQAL";
+var BASE_URL = "https://apihub.agnes-ai.com/v1";
+var MODEL = "agnes-2.5-flash";
+var GEN_PARAMS = { temperature: 0.05, top_p: 0.9, max_tokens: 4096, stream: false };
+
+// ============ CONFIG AMIGO ============
+var MAX_NUM = 28;
+var DRAW_SIZE = 7;
+var CHAUD_POOL = 10;
+
+// ============ ÉTAT ============
+var state = {
+  images: [],
+  running: false,
+  historiqueDraws: [],
+  stats: {},
+  paires: {},
+  selectionManuelle: new Set()
+};
+
+// ============ UTILS ============
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+function shuffle(arr){
+  var a = arr.slice();
+  for(var i = a.length - 1; i > 0; i--){
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+function pickRandom(pool, n){ return shuffle(pool).slice(0, n); }
+
+function log(msg, cls){
+  cls = cls || "";
+  var el = document.getElementById("log-box");
+  var d = document.createElement("div");
+  d.className = cls;
+  d.textContent = "[" + new Date().toLocaleTimeString() + "] " + msg;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+
+function setStatus(t){ document.getElementById("global-status-text").textContent = t; }
+function getApiKey(){ return (localStorage.getItem("agnes_api_key") || "").trim() || DEFAULT_API_KEY; }
+
+function saveApiKey(){
+  var v = document.getElementById("api-key-input").value.trim();
+  if(!v){ alert("Clé vide."); return; }
+  localStorage.setItem("agnes_api_key", v);
+  log("Clé API sauvegardée.", "ok");
+}
+
+function apiHeaders(){
+  return { "Authorization": "Bearer " + getApiKey(), "Content-Type": "application/json" };
+}
+
+// ============ UPLOAD IMAGES ============
+var uploadArea = document.getElementById("upload-area");
+var fileInput = document.getElementById("file-input");
+
+uploadArea.addEventListener("click", function(){ fileInput.click(); });
+uploadArea.addEventListener("dragover", function(e){ e.preventDefault(); uploadArea.classList.add("dragover"); });
+uploadArea.addEventListener("dragleave", function(){ uploadArea.classList.remove("dragover"); });
+uploadArea.addEventListener("drop", function(e){
+  e.preventDefault();
+  uploadArea.classList.remove("dragover");
+  if(e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files));
+});
+fileInput.addEventListener("change", function(e){
+  if(e.target.files.length) handleFiles(Array.from(e.target.files));
+});
+
+function fileToDataUri(file){
+  return new Promise(function(resolve, reject){
+    var r = new FileReader();
+    r.onload = function(ev){ resolve(ev.target.result); };
+    r.onerror = function(){ reject(new Error("Erreur lecture")); };
+    r.readAsDataURL(file);
+  });
+}
+
+async function handleFiles(files){
+  for(var i = 0; i < files.length; i++){
+    var file = files[i];
+    if(!file.type.startsWith("image/")) continue;
+    if(file.size > 10 * 1024 * 1024){ alert("Image trop lourde : " + file.name); continue; }
+    try{
+      var dataUri = await fileToDataUri(file);
+      state.images.push({ dataUri: dataUri, name: file.name, extracted: [] });
+      log("📸 Image ajoutée : " + file.name, "ok");
+    } catch(err){
+      log("Erreur : " + err.message, "err");
+    }
+  }
+  renderPreviews();
+  updateButtons();
+}
+
+function renderPreviews(){
+  var html = "";
+  for(var i = 0; i < state.images.length; i++){
+    html += '<div class="preview-item">' +
+      '<img src="' + state.images[i].dataUri + '" alt="">' +
+      '<button class="remove" onclick="removeImage(' + i + ')">✕</button>' +
+      '</div>';
+  }
+  document.getElementById("previews").innerHTML = html;
+}
+
+function removeImage(i){
+  state.images.splice(i, 1);
+  renderPreviews();
+  updateButtons();
+}
+
+function updateButtons(){
+  var ocrBtn = document.getElementById("ocr-btn");
+  ocrBtn.disabled = state.running || state.images.length === 0;
+  ocrBtn.textContent = state.running ? "🔍 Analyse en cours…" : "🔍 Lire les numéros (" + state.images.length + " photo" + (state.images.length > 1 ? "s" : "") + ")";
+}
+
+function clearAll(){
+  state.images = [];
+  state.historiqueDraws = [];
+  state.stats = {};
+  state.paires = {};
+  state.selectionManuelle.clear();
+  document.getElementById("previews").innerHTML = "";
+  document.getElementById("historique").value = "";
+  document.getElementById("results-panel").classList.add("hidden");
+  document.getElementById("log-box").innerHTML = "";
+  fileInput.value = "";
+  for(var i = 1; i <= MAX_NUM; i++) state.stats[i] = 0;
+  renderGrilleManuelle();
+  parseHistorique();
+  updateButtons();
+  log("Tout effacé.", "");
+}
+
+// ============ OCR AGNES 2.5 FLASH ============
+async function extractNumbers(dataUri, index){
+  log("🔍 Lecture image " + (index + 1) + " via " + MODEL + "…", "hl");
+
+  var prompt = "Analyse cette image de tirages de loterie Amigo (FDJ).\n\n" +
+    "MÉCANIQUE AMIGO :\n" +
+    "- Numéros entre 1 et 28\n" +
+    "- Chaque tirage contient 7 numéros BLEUS\n" +
+    "- Souvent accompagnés de 5 numéros JAUNES (facultatifs)\n\n" +
+    "INSTRUCTIONS :\n" +
+    "- Extrais chaque TIRAGE visible comme une ligne de numéros\n" +
+    "- Si tu vois 7 numéros bleus + 5 jaunes, ne garde QUE les 7 bleus\n" +
+    "- Sépare clairement chaque tirage (ligne par ligne, date par date)\n" +
+    "- Ne garde que les numéros entre 1 et 28\n" +
+    "- Réponds UNIQUEMENT en JSON valide, sans texte, sans markdown\n\n" +
+    "FORMAT ATTENDU :\n" +
+    "{\n" +
+    '  "draws": [\n' +
+    "    [7, 12, 15, 21, 24, 27, 3],\n" +
+    "    [5, 9, 14, 18, 22, 26, 28]\n" +
+    "  ],\n" +
+    '  "confidence": "high",\n' +
+    '  "notes": "description courte"\n' +
+    "}\n\n" +
+    'Si aucun numéro visible : {"draws": [], "confidence": "low", "notes": "aucun"}';
+
+  try{
+    var res = await fetch(BASE_URL + "/chat/completions", {
+      method: "POST",
+      headers: apiHeaders(),
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: "Tu es un extracteur OCR. Réponds UNIQUEMENT en JSON valide." },
+          { role: "user", content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: dataUri, detail: "high" } }
+          ]}
+        ],
+        temperature: GEN_PARAMS.temperature,
+        top_p: GEN_PARAMS.top_p,
+        max_tokens: GEN_PARAMS.max_tokens,
+        stream: false
+      })
+    });
+
+    if(!res.ok){
+      var errTxt = await res.text();
+      var hint = "";
+      if(res.status === 400) hint = " (image refusée — essaie JPG plus petit)";
+      if(res.status === 401) hint = " (clé API invalide)";
+      if(res.status === 429) hint = " (trop de requêtes)";
+      throw new Error("HTTP " + res.status + hint + " — " + errTxt.slice(0, 200));
+    }
+
+    var data = await res.json();
+    var content = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || "";
+    if(!content) throw new Error("Réponse vide");
+
+    // Nettoyage JSON sans backticks
+    content = content.replace(/```json/g, "").replace(/```/g, "").trim();
+
+    var fb = content.indexOf("{");
+    var lb = content.lastIndexOf("}");
+    if(fb === -1 || lb === -1) throw new Error("Pas de JSON");
+
+    var parsed = JSON.parse(content.slice(fb, lb + 1));
+    if(!parsed.draws || !Array.isArray(parsed.draws)) throw new Error("Format invalide");
+
+    var cleanDraws = [];
+    for(var i = 0; i < parsed.draws.length; i++){
+      var d = parsed.draws[i];
+      if(!Array.isArray(d)) continue;
+      var filtered = [];
+      for(var j = 0; j < d.length; j++){
+        var n = d[j];
+        if(typeof n === "number" && n >= 1 && n <= MAX_NUM) filtered.push(n);
+      }
+      if(filtered.length >= 5) cleanDraws.push(filtered);
+    }
+
+    log("✅ Image " + (index + 1) + " : " + cleanDraws.length + " tirage(s) — confiance : " + (parsed.confidence || "?"), "ok");
+    if(parsed.notes) log("   " + parsed.notes, "");
+    return cleanDraws;
+  } catch(err){
+    log("❌ Image " + (index + 1) + " : " + err.message, "err");
+    return [];
+  }
+}
+
+async function lancerOCR(){
+  if(state.running || state.images.length === 0) return;
+  state.running = true;
+  updateButtons();
+  document.getElementById("status-panel").classList.remove("hidden");
+
+  var totalDraws = [];
+
+  try{
+    for(var i = 0; i < state.images.length; i++){
+      setStatus("Lecture image " + (i + 1) + "/" + state.images.length + "…");
+      var draws = await extractNumbers(state.images[i].dataUri, i);
+      state.images[i].extracted = draws;
+      totalDraws = totalDraws.concat(draws);
+      await sleep(500);
+    }
+
+    if(totalDraws.length === 0){
+      log("⚠️ Aucun tirage détecté.", "warn");
+      setStatus("Aucun tirage détecté.");
+      return;
+    }
+
+    var ta = document.getElementById("historique");
+    var existing = ta.value.trim();
+    var lines = [];
+    for(var k = 0; k < totalDraws.length; k++) lines.push(totalDraws[k].join(" "));
+    var newLines = lines.join("\n");
+    ta.value = existing ? existing + "\n" + newLines : newLines;
+
+    parseHistorique();
+    log("✦ " + totalDraws.length + " tirage(s) ajouté(s) à l'historique ✦", "ok");
+    setStatus("✦ OCR terminé ✦");
+
+  } catch(err){
+    log("❌ Erreur OCR : " + err.message, "err");
+  } finally {
+    state.running = false;
+    updateButtons();
+  }
+}
+
+// ============ PARSING HISTORIQUE ============
+function parseHistorique(){
+  var raw = document.getElementById("historique").value.trim();
+  state.historiqueDraws = [];
+  state.stats = {};
+  state.paires = {};
+  for(var i = 1; i <= MAX_NUM; i++) state.stats[i] = 0;
+
+  if(!raw){
+    document.getElementById("histo-count").textContent = "0 tirage — mode aléatoire";
+    document.getElementById("histo-top").textContent = "🔥 Top chauds : aucun";
+    renderGrilleManuelle();
+    renderStats();
+    return;
+  }
+
+  var lines = raw.split(/\n/).map(function(l){ return l.trim(); }).filter(function(l){ return l; });
+  for(var li = 0; li < lines.length; li++){
+    var nums = lines[li].split(/[\s,;]+/)
+      .map(function(x){ return parseInt(x, 10); })
+      .filter(function(n){ return !isNaN(n) && n >= 1 && n <= MAX_NUM; });
+    if(nums.length >= 5) state.historiqueDraws.push(nums);
+  }
+
+  for(var d = 0; d < state.historiqueDraws.length; d++){
+    var draw = state.historiqueDraws[d];
+    for(var n = 0; n < draw.length; n++) state.stats[draw[n]]++;
+    for(var a = 0; a < draw.length; a++){
+      for(var b = a + 1; b < draw.length; b++){
+        var key = Math.min(draw[a], draw[b]) + "-" + Math.max(draw[a], draw[b]);
+        state.paires[key] = (state.paires[key] || 0) + 1;
+      }
+    }
+  }
+
+  var sorted = Object.keys(state.stats).map(function(k){
+    return { n: parseInt(k, 10), c: state.stats[k] };
+  }).sort(function(a, b){ return b.c - a.c || a.n - b.n; });
+
+  var top10 = sorted.slice(0, CHAUD_POOL).filter(function(x){ return x.c > 0; }).map(function(x){ return x.n; });
+
+  document.getElementById("histo-count").textContent = state.historiqueDraws.length + " tirage(s) chargé(s)";
+  document.getElementById("histo-top").textContent = top10.length > 0 ? "🔥 Top : " + top10.join(", ") : "🔥 Aucun (pas assez)";
+
+  log("📊 Historique : " + state.historiqueDraws.length + " tirages", "ok");
+  renderGrilleManuelle();
+  renderStats();
+  renderPaires();
+}
+
+// ============ GRILLE MANUELLE ============
+function renderGrilleManuelle(){
+  var el = document.getElementById("grille-manuelle");
+  var sorted = Object.keys(state.stats).map(function(k){
+    return { n: parseInt(k, 10), c: state.stats[k] };
+  }).sort(function(a, b){ return b.c - a.c; });
+
+  var hotSet = new Set();
+  for(var i = 0; i < Math.min(CHAUD_POOL, sorted.length); i++){
+    if(sorted[i].c > 0) hotSet.add(sorted[i].n);
+  }
+
+  var html = "";
+  for(var n = 1; n <= MAX_NUM; n++){
+    var isSel = state.selectionManuelle.has(n);
+    var isHot = hotSet.has(n);
+    var classes = "num-btn" + (isSel ? " selected" : "") + (isHot ? " hot" : "");
+    html += '<button class="' + classes + '" onclick="toggleNum(' + n + ')">' + n + '</button>';
+  }
+  el.innerHTML = html;
+  document.getElementById("sel-count").textContent = state.selectionManuelle.size + " / 7 sélectionnés";
+}
+
+function toggleNum(n){
+  if(state.selectionManuelle.has(n)) state.selectionManuelle.delete(n);
+  else if(state.selectionManuelle.size < 7) state.selectionManuelle.add(n);
+  else { log("⚠️ Maximum 7 numéros", "warn"); return; }
+  renderGrilleManuelle();
+}
+
+function resetSelection(){
+  state.selectionManuelle.clear();
+  renderGrilleManuelle();
+}
+
+// ============ GÉNÉRATION ============
+function genererGrilles(){
+  parseHistorique();
+
+  var nbChauds = parseInt(document.getElementById("nb-chauds").value, 10);
+  var nbGrilles = parseInt(document.getElementById("nb-grilles").value, 10);
+
+  var exclusRaw = document.getElementById("exclus").value.trim();
+  var exclus = new Set(exclusRaw.split(/[\s,;]+/)
+    .map(function(x){ return parseInt(x, 10); })
+    .filter(function(n){ return !isNaN(n) && n >= 1 && n <= MAX_NUM; }));
+
+  var pool = [];
+  for(var i = 1; i <= MAX_NUM; i++) if(!exclus.has(i)) pool.push(i);
+
+  if(pool.length < 7){
+    alert("Pas assez de numéros disponibles.");
+    return;
+  }
+
+  var sortedPool = pool.slice().sort(function(a, b){
+    return (state.stats[b] || 0) - (state.stats[a] || 0) || a - b;
+  });
+  var chauds = sortedPool.slice(0, Math.min(CHAUD_POOL, sortedPool.length));
+
+  var grilles = [];
+  for(var g = 0; g < nbGrilles; g++){
+    var grille = [];
+    if(nbChauds > 0 && chauds.length >= nbChauds){
+      grille = pickRandom(chauds, nbChauds);
+    }
+    var reste = sortedPool.filter(function(n){ return grille.indexOf(n) === -1; });
+    grille = grille.concat(pickRandom(reste, 7 - grille.length));
+    grille = Array.from(new Set(grille));
+    while(grille.length < 7){
+      var n = pool[Math.floor(Math.random() * pool.length)];
+      if(grille.indexOf(n) === -1) grille.push(n);
+    }
+    grille.sort(function(a, b){ return a - b; });
+    grilles.push(grille);
+  }
+
+  renderGrilles(grilles);
+  renderStats();
+  renderPaires();
+  document.getElementById("results-panel").classList.remove("hidden");
+  document.getElementById("results-panel").scrollIntoView({ behavior: "smooth" });
+  log("🎯 " + nbGrilles + " grille(s) — " + nbChauds + " chauds + " + (7 - nbChauds) + " aléatoires", "ok");
+}
+
+function renderGrilles(grilles){
+  var el = document.getElementById("grilles-container");
+  var sorted = Object.keys(state.stats).map(function(k){
+    return { n: parseInt(k, 10), c: state.stats[k] };
+  }).sort(function(a, b){ return b.c - a.c; });
+
+  var hotSet = new Set();
+  for(var i = 0; i < Math.min(CHAUD_POOL, sorted.length); i++){
+    if(sorted[i].c > 0) hotSet.add(sorted[i].n);
+  }
+
+  var html = "";
+  for(var g = 0; g < grilles.length; g++){
+    var grille = grilles[g];
+    var boules = "";
+    var score = 0;
+    for(var j = 0; j < grille.length; j++){
+      var n = grille[j];
+      var isHot = hotSet.has(n);
+      score += (state.stats[n] || 0);
+      boules += '<div class="boule ' + (isHot ? "jaune" : "bleu") + '">' + n + '</div>';
+    }
+    html += '<div class="grille-finale">' +
+      '<h3>🎰 Grille ' + (g + 1) + '</h3>' +
+      '<div class="boules">' + boules + '</div>' +
+      '<div style="font-size:.75rem;color:#c7d2fe;margin-top:.8rem">' +
+        '🔥 Jaune = chaud · 🔵 Bleu = aléatoire · Score : <strong>' + score + '</strong>' +
+      '</div>' +
+    '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function renderStats(){
+  var el = document.getElementById("stats-nums");
+  if(!el) return;
+  var sorted = Object.keys(state.stats).map(function(k){
+    return { n: parseInt(k, 10), c: state.stats[k] };
+  }).sort(function(a, b){ return b.c - a.c || a.n - b.n; });
+
+  var html = "";
+  for(var i = 0; i < sorted.length; i++){
+    var item = sorted[i];
+    var isTop = i < CHAUD_POOL && item.c > 0;
+    html += '<div class="stat-card' + (isTop ? " top" : "") + '">' +
+      '<div class="n">' + item.n + '</div>' +
+      '<div class="lbl">' + item.c + ' sortie' + (item.c > 1 ? "s" : "") + (isTop ? " 🔥" : "") + '</div>' +
+    '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function renderPaires(){
+  var el = document.getElementById("paires-list");
+  if(!el) return;
+  var sorted = Object.keys(state.paires).map(function(k){
+    return { pair: k, c: state.paires[k] };
+  }).sort(function(a, b){ return b.c - a.c; }).slice(0, 20);
+
+  if(sorted.length === 0){
+    el.innerHTML = '<p style="color:var(--dim);padding:1rem;font-size:.85rem">Aucune paire détectée.</p>';
+    return;
+  }
+
+  var html = "";
+  for(var i = 0; i < sorted.length; i++){
+    var parts = sorted[i].pair.split("-");
+    html += '<div style="display:flex;align-items:center;gap:.8rem;padding:.6rem;background:var(--panel2);border-radius:10px;margin-bottom:.4rem">' +
+      '<div class="boule bleu" style="width:40px;height:40px;font-size:1rem">' + parts[0] + '</div>' +
+      '<div class="boule bleu" style="width:40px;height:40px;font-size:1rem">' + parts[1] + '</div>' +
+      '<span style="color:var(--gold);font-weight:700">' + sorted[i].c + '×</span>' +
+      '<span style="color:var(--dim);font-size:.75rem;margin-left:auto">ensemble</span>' +
+    '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function switchTab(name, btn){
+  var tabs = document.querySelectorAll(".tab");
+  for(var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+  btn.classList.add("active");
+  document.getElementById("tab-stats").classList.toggle("hidden", name !== "stats");
+  document.getElementById("tab-paires").classList.toggle("hidden", name !== "paires");
+}
+
+// ============ INIT ============
+(function init(){
+  for(var i = 1; i <= MAX_NUM; i++) state.stats[i] = 0;
+  var stored = localStorage.getItem("agnes_api_key");
+  if(stored) document.getElementById("api-key-input").value = stored;
+  renderGrilleManuelle();
+  updateButtons();
+  log("🎰 Amigo FDJ — OCR + Générateur prêts", "ok");
+  log("Importe des photos ou colle un historique.", "");
+})();
+</script>
+</body>
+</html>
