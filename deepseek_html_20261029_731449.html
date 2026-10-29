@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#04365c">
+<title>💧 HydroRappel — Boire de l'eau</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+  :root{
+    --cyan:#7ef9ff;
+    --blue:#2196f3;
+    --deep:#021b33;
+  }
+
+  html,body{height:100%}
+
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif;
+    min-height:100vh;
+    display:flex;
+    background:linear-gradient(160deg,#021b33 0%,#04365c 35%,#046a8c 70%,#06a3b8 100%);
+    background-attachment:fixed;
+    color:#eaf6ff;
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  /* ---------- décor : bulles ---------- */
+  #bg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+  .bubble{
+    position:absolute;bottom:-80px;border-radius:50%;
+    background:radial-gradient(circle at 32% 30%,rgba(255,255,255,.9),rgba(126,249,255,.25));
+    animation:rise linear infinite;
+    will-change:transform;
+  }
+  @keyframes rise{
+    from{transform:translateY(0) translateX(0)}
+    to{transform:translateY(-115vh) translateX(40px)}
+  }
+
+  /* ---------- décor : vagues ---------- */
+  .wave{
+    position:fixed;bottom:0;left:0;width:200%;height:150px;z-index:0;pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 140' preserveAspectRatio='none'%3E%3Cpath d='M0,70 C180,130 180,10 360,70 C540,130 540,10 720,70 L720,140 L0,140 Z' fill='%237ef9ff' fill-opacity='0.09'/%3E%3C/svg%3E");
+    background-repeat:repeat-x;
+    background-size:720px 150px;
+    animation:waveMove 14s linear infinite;
+  }
+  .wave.w2{
+    height:110px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 140' preserveAspectRatio='none'%3E%3Cpath d='M0,70 C180,130 180,10 360,70 C540,130 540,10 720,70 L720,140 L0,140 Z' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E");
+    background-size:720px 110px;
+    animation-duration:9s;
+    animation-direction:reverse;
+  }
+  @keyframes waveMove{from{transform:translateX(0)}to{transform:translateX(-720px)}}
+
+  /* ---------- carte ---------- */
+  .app{
+    position:relative;z-index:2;
+    margin:auto;
+    width:100%;max-width:460px;
+    padding:24px 16px 40px;
+  }
+
+  .card{
+    background:rgba(255,255,255,.07);
+    backdrop-filter:blur(22px) saturate(140%);
+    -webkit-backdrop-filter:blur(22px) saturate(140%);
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:30px;
+    padding:24px 22px 26px;
+    box-shadow:0 24px 60px rgba(0,10,25,.55),inset 0 1px 0 rgba(255,255,255,.18);
+  }
+
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .logo{font-size:1.05rem;font-weight:700;letter-spacing:.4px;display:flex;align-items:center;gap:8px}
+  .logo .drop{font-size:1.3rem;animation:bob 3s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .clock{
+    font-variant-numeric:tabular-nums;font-weight:600;font-size:.95rem;
+    padding:6px 12px;border-radius:12px;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+    color:#bfe9ff;
+  }
+
+  /* ---------- anneau de progression ---------- */
+  .progress-wrap{position:relative;width:230px;height:230px;margin:6px auto 18px}
+  .ring{width:100%;height:100%;display:block}
+  .ring circle{fill:none;stroke-width:14;stroke-linecap:round}
+  .ring-bg{stroke:rgba(255,255,255,.11)}
+  .ring-fg{
+    stroke:url(#grad);
+    stroke-dasharray:552.92;
+    stroke-dashoffset:552.92;
+    transform:rotate(-90deg);
+    transform-origin:50% 50%;
+    transition:stroke-dashoffset .9s cubic-bezier(.4,0,.2,1);
+    filter:drop-shadow(0 0 10px rgba(126,249,255,.55));
+  }
+  .ring-fg.done{stroke:#5effb0;filter:drop-shadow(0 0 14px rgba(94,255,176,.8))}
+
+  .center{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;pointer-events:none;
+  }
+  .amount{font-size:2.9rem;font-weight:800;line-height:1;letter-spacing:-1px;
+    background:linear-gradient(180deg,#ffffff,#9fe9ff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+  .unit{font-size:.82rem;color:#9fc9e0;margin-top:6px;letter-spacing:.5px}
+  .percent{margin-top:8px;font-size:.78rem;font-weight:700;color:var(--cyan);
+    background:rgba(126,249,255,.12);padding:3px 10px;border-radius:20px;
+    border:1px solid rgba(126,249,255,.25)}
+
+  /* ---------- boutons d'ajout ---------- */
+  .quick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  .qbtn{
+    border:1px solid rgba(255,255,255,.18);
+    background:rgba(255,255,255,.07);
+    color:#dff4ff;font-size:.9rem;font-weight:700;
+    padding:13px 4px;border-radius:16px;cursor:pointer;
+    transition:transform .15s,background .2s,box-shadow .2s;
+    font-family:inherit;
+  }
+  .qbtn:hover{background:rgba(126,249,255,.18);box-shadow:0 0 18px rgba(126,249,255,.25)}
+  .qbtn:active{transform:scale(.94)}
+
+  .mainbtn{
+    width:100%;border:none;cursor:pointer;font-family:inherit;
+    padding:17px;border-radius:20px;font-size:1.05rem;font-weight:800;letter-spacing:.3px;
+    color:#04202f;
+    background:linear-gradient(135deg,#8ff7ff,#38b6ff 55%,#1e88e5);
+    box-shadow:0 12px 30px rgba(30,136,229,.45),inset 0 1px 0 rgba(255,255,255,.7);
+    transition:transform .15s,box-shadow .25s;
+    margin-bottom:18px;
+  }
+  .mainbtn:hover{box-shadow:0 14px 38px rgba(56,182,255,.65)}
+  .mainbtn:active{transform:scale(.97)}
+
+  /* ---------- réglages ---------- */
+  .panel{border-top:1px solid rgba(255,255,255,.12);padding-top:16px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .row label{font-size:.88rem;color:#cfe8f7;font-weight:600}
+  .row .val{font-size:.82rem;color:var(--cyan);font-weight:700;font-variant-numeric:tabular-nums}
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;
+    width:100%;height:6px;border-radius:10px;
+    background:rgba(255,255,255,.15);outline:none;margin-top:6px;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+    background:linear-gradient(135deg,#8ff7ff,#2196f3);
+    box-shadow:0 0 12px rgba(126,249,255,.8);cursor:pointer;border:2px solid #fff3;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px;height:18px;border-radius:50%;border:none;
+    background:linear-gradient(135deg,#8ff7ff,#2196f3);
+    box-shadow:0 0 12px rgba(126,249,255,.8);cursor:pointer;
+  }
+
+  .switch{position:relative;display:inline-block;width:52px;height:29px;flex:none}
+  .switch input{opacity:0;width:0;height:0}
+  .switch .sl{
+    position:absolute;inset:0;cursor:pointer;border-radius:30px;
+    background:rgba(255,255,255,.16);transition:.3s;
+    border:1px solid rgba(255,255,255,.15);
+  }
+  .switch .sl:before{
+    content:"";position:absolute;height:21px;width:21px;left:4px;top:3px;
+    border-radius:50%;background:#dfeaf2;transition:.3s;
+    box-shadow:0 2px 6px rgba(0,0,0,.35);
+  }
+  .switch input:checked + .sl{background:linear-gradient(135deg,#38b6ff,#2196f3)}
+  .switch input:checked + .sl:before{transform:translateX(23px);background:#fff}
+
+  .countdown{
+    text-align:center;font-size:.85rem;color:#9fc9e0;margin-top:14px;
+    padding:10px;border-radius:14px;background:rgba(0,0,0,.18);
+    border:1px solid rgba(255,255,255,.08);font-variant-numeric:tabular-nums;
+  }
+  .countdown b{color:var(--cyan)}
+
+  .reset{
+    display:block;margin:14px auto 0;background:none;border:none;cursor:pointer;
+    color:#7fa8bf;font-size:.78rem;font-family:inherit;text-decoration:underline;
+    opacity:.8;transition:opacity .2s;
+  }
+  .reset:hover{opacity:1;color:#bfe9ff}
+
+  /* ---------- modale d'alarme ---------- */
+  .overlay{
+    position:fixed;inset:0;z-index:50;display:none;
+    align-items:center;justify-content:center;padding:20px;
+    background:rgba(2,18,33,.82);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  }
+  .overlay.show{display:flex;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+
+  .modal{
+    width:100%;max-width:380px;text-align:center;
+    background:linear-gradient(160deg,rgba(12,74,110,.95),rgba(4,40,70,.97));
+    border:1px solid rgba(126,249,255,.35);
+    border-radius:28px;padding:34px 26px 26px;
+    box-shadow:0 0 70px rgba(56,182,255,.45),inset 0 1px 0 rgba(255,255,255,.2);
+    animation:pop .45s cubic-bezier(.2,1.3,.4,1);
+  }
+  @keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+
+  .bigdrop{font-size:4.5rem;display:block;margin-bottom:8px;animation:dropPulse 1.4s ease-in-out infinite}
+  @keyframes dropPulse{
+    0%,100%{transform:scale(1) translateY(0);filter:drop-shadow(0 0 12px rgba(126,249,255,.7))}
+    50%{transform:scale(1.12) translateY(-6px);filter:drop-shadow(0 0 26px rgba(126,249,255,1))}
+  }
+
+  .modal h2{font-size:1.35rem;margin-bottom:8px;color:#fff}
+  .modal p{font-size:.9rem;color:#a9d4ea;margin-bottom:22px;line-height:1.5}
+
+  .modal .mbtn{
+    width:100%;padding:15px;border-radius:16px;border:none;cursor:pointer;
+    font-family:inherit;font-size:.98rem;font-weight:800;margin-bottom:10px;
+    transition:transform .15s,box-shadow .2s;
+  }
+  .mbtn.primary{
+    color:#04202f;
+    background:linear-gradient(135deg,#8ff7ff,#38b6ff);
+    box-shadow:0 10px 26px rgba(56,182,255,.5);
+  }
+  .mbtn.ghost{
+    background:rgba(255,255,255,.09);color:#cfe8f7;
+    border:1px solid rgba(255,255,255,.18);margin-bottom:0;
+  }
+  .mbtn:active{transform:scale(.96)}
+
+  /* ---------- responsive ---------- */
+  @media(max-width:400px){
+    .progress-wrap{width:200px;height:200px}
+    .amount{font-size:2.4rem}
+    .card{padding:20px 16px 22px;border-radius:24px}
+  }
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+<div class="wave"></div>
+<div class="wave w2"></div>
+
+<div class="app">
+  <div class="card">
+
+    <header>
+      <div class="logo"><span class="drop">💧</span> HydroRappel</div>
+      <div class="clock" id="clock">--:--</div>
+    </header>
+
+    <!-- Anneau de progression -->
+    <div class="progress-wrap">
+      <svg class="ring" viewBox="0 0 200 200">
+        <defs>
+          <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#8ff7ff"/>
+            <stop offset="100%" stop-color="#1e88e5"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="100" cy="100" r="88"/>
+        <circle class="ring-fg" id="ring" cx="100" cy="100" r="88"/>
+      </svg>
+      <div class="center">
+        <div class="amount" id="amount">0</div>
+        <div class="unit">ml sur <span id="goalLabel">2000</span> ml</div>
+        <div class="percent" id="percent">0 %</div>
+      </div>
+    </div>
+
+    <!-- Boutons rapides -->
+    <div class="quick">
+      <button class="qbtn" data-add="150">+150 ml</button>
+      <button class="qbtn" data-add="250">+250 ml</button>
+      <button class="qbtn" data-add="500">+500 ml</button>
+    </div>
+
+    <button class="mainbtn" id="drinkBtn">💧 J'ai bu un verre (+250 ml)</button>
+
+    <!-- Réglages -->
+    <div class="panel">
+
+      <div class="row">
+        <label for="goalRange">Objectif quotidien</label>
+        <span class="val" id="goalVal">2000 ml</span>
+      </div>
+      <input type="range" id="goalRange" min="1000" max="4000" step="250" value="2000">
+
+      <div class="row" style="margin-top:18px">
+        <label for="intRange">Rappel toutes les</label>
+        <span class="val" id="intVal">45 min</span>
+      </div>
+      <input type="range" id="intRange" min="5" max="120" step="5" value="45">
+
+      <div class="row" style="margin-top:18px">
+        <label>🔔 Rappels actifs</label>
+        <label class="switch"><input type="checkbox" id="remindersToggle" checked><span class="sl"></span></label>
+      </div>
+
+      <div class="row">
+        <label>🔊 Son d'alarme</label>
+        <label class="switch"><input type="checkbox" id="soundToggle" checked><span class="sl"></span></label>
+      </div>
+
+      <div class="row" style="margin-bottom:0">
+        <label>📱 Notifications système</label>
+        <label class="switch"><input type="checkbox" id="notifToggle"><span class="sl"></span></label>
+      </div>
+
+      <div class="countdown" id="countdown">Prochain rappel dans <b>--:--</b></div>
+
+      <button class="reset" id="resetBtn">Réinitialiser la journée</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modale d'alarme -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <span class="bigdrop">💧</span>
+    <h2>C'est l'heure de boire !</h2>
+    <p>Votre corps vous réclame de l'eau.<br>Un verre maintenant, et vous repartez d'énergie.</p>
+    <button class="mbtn primary" id="modalDrink">✅ J'ai bu (+250 ml)</button>
+    <button class="mbtn ghost" id="modalSnooze">⏰ Me rappeler dans 5 min</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ===================== ÉTAT ===================== */
+  const LS_KEY = 'hydrorappel_v1';
+  const CIRC = 2 * Math.PI * 88;
+
+  const todayKey = () => {
+    const d = new Date();
+    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  };
+
+  const defaultState = () => ({
+    goal: 2000,
+    drunk: 0,
+    interval: 45,          // minutes
+    remindersOn: true,
+    soundOn: true,
+    nextReminder: null,
+    day: todayKey()
+  });
+
+  let state = defaultState();
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) state = Object.assign(defaultState(), JSON.parse(raw));
+    } catch (e) { /* ignore */ }
+
+    // Nouveau jour -> on remet le compteur à zéro
+    if (state.day !== todayKey()) {
+      state.day = todayKey();
+      state.drunk = 0;
+      state.nextReminder = null;
+    }
+    // Si aucun rappel planifié et rappels actifs, on planifie
+    if (state.remindersOn && !state.nextReminder) {
+      state.nextReminder = Date.now() + state.interval * 60000;
+    }
+  }
+
+  function save() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  /* ===================== DOM ===================== */
+  const $ = id => document.getElementById(id);
+  const ring       = $('ring');
+  const amountEl   = $('amount');
+  const goalLabel  = $('goalLabel');
+  const percentEl  = $('percent');
+  const clockEl    = $('clock');
+  const countdown  = $('countdown');
+  const overlay    = $('overlay');
+  const goalRange  = $('goalRange');
+  const goalVal    = $('goalVal');
+  const intRange   = $('intRange');
+  const intVal     = $('intVal');
+  const remToggle  = $('remindersToggle');
+  const sndToggle  = $('soundToggle');
+  const notifToggle= $('notifToggle');
+
+  /* ===================== SON ===================== */
+  let audioCtx = null;
+
+  function initAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playChime() {
+    if (!state.soundOn) return;
+    initAudio();
+    if (!audioCtx) return;
+
+    // Carillon doux à 3 notes (C5 - E5 - G5)
+    const notes = [523.25, 659.25, 783.99];
+    notes.forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const t = audioCtx.currentTime + i * 0.16;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.28, t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+
+      osc.start(t);
+      osc.stop(t + 1.2);
+    });
+  }
+
+  /* ===================== NOTIFICATIONS ===================== */
+  function updateNotifToggle() {
+    if (!('Notification' in window)) {
+      notifToggle.checked = false;
+      notifToggle.disabled = true;
+      return;
+    }
+    notifToggle.checked = Notification.permission === 'granted';
+  }
+
+  notifToggle.addEventListener('change', () => {
+    if (!('Notification' in window)) return;
+    if (notifToggle.checked) {
+      Notification.requestPermission().then(updateNotifToggle);
+    } else {
+      notifToggle.checked = false;
+    }
+  });
+
+  function systemNotify() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    try {
+      new Notification("💧 C'est l'heure de boire de l'eau !", {
+        body: "Un petit verre pour rester hydraté ?",
+        tag: 'hydrorappel',
+        renotify: true
+      });
+    } catch (e) {}
+  }
+
+  /* ===================== AFFICHAGE ===================== */
+  function render() {
+    const p = Math.min(state.drunk / state.goal, 1);
+
+    ring.style.strokeDashoffset = CIRC * (1 - p);
+    ring.classList.toggle('done', p >= 1);
+
+    amountEl.textContent  = state.drunk;
+    goalLabel.textContent = state.goal;
+    percentEl.textContent = Math.round(p * 100) + ' %';
+
+    goalVal.textContent = state.goal + ' ml';
+    intVal.textContent  = state.interval + ' min';
+    goalRange.value     = state.goal;
+    intRange.value      = state.interval;
+
+    remToggle.checked = state.remindersOn;
+    sndToggle.checked = state.soundOn;
+
+    if (p >= 1 && state.drunk === state.goal) celebrate();
+  }
+
+  let celebrated = false;
+  function celebrate() {
+    if (celebrated) return;
+    celebrated = true;
+    document.title = '🏆 Objectif atteint !';
+    setTimeout(() => { document.title = "💧 HydroRappel — Boire de l'eau"; }, 6000);
+  }
+
+  /* ===================== ACTIONS ===================== */
+  function addWater(ml) {
+    state.drunk = Math.max(0, state.drunk + ml);
+    if (state.drunk > state.goal) celebrated = true;
+    save();
+    render();
+    // petite vibration sur mobile
+    if (navigator.vibrate) navigator.vibrate(ml > 0 ? 40 : 0);
+  }
+
+  $('drinkBtn').addEventListener('click', () => { initAudio(); addWater(250); });
+
+  document.querySelectorAll('.qbtn').forEach(b => {
+    b.addEventListener('click', () => { initAudio(); addWater(parseInt(b.dataset.add, 10)); });
+  });
+
+  $('resetBtn').addEventListener('click', () => {
+    if (!confirm('Remettre le compteur de la journée à zéro ?')) return;
+    state.drunk = 0;
+    celebrated = false;
+    save();
+    render();
+  });
+
+  /* ===================== RÉGLAGES ===================== */
+  goalRange.addEventListener('input', () => {
+    state.goal = parseInt(goalRange.value, 10);
+    if (state.drunk >= state.goal) celebrated = true;
+    goalVal.textContent = state.goal + ' ml';
+    save();
+    render();
+  });
+
+  intRange.addEventListener('input', () => {
+    state.interval = parseInt(intRange.value, 10);
+    intVal.textContent = state.interval + ' min';
+    if (state.remindersOn) {
+      state.nextReminder = Date.now() + state.interval * 60000;
+    }
+    save();
+  });
+
+  remToggle.addEventListener('change', () => {
+    state.remindersOn = remToggle.checked;
+    if (state.remindersOn) {
+      state.nextReminder = Date.now() + state.interval * 60000;
+    } else {
+      state.nextReminder = null;
+      countdown.innerHTML = 'Rappels désactivés';
+    }
+    save();
+  });
+
+  sndToggle.addEventListener('change', () => {
+    state.soundOn = sndToggle.checked;
+    if (state.soundOn) { initAudio(); playChime(); }
+    save();
+  });
+
+  /* ===================== ALARME ===================== */
+  function fireReminder() {
+    // on planifie tout de suite le suivant pour éviter le spam
+    state.nextReminder = Date.now() + state.interval * 60000;
+    save();
+
+    overlay.classList.add('show');
+    playChime();
+    systemNotify();
+
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  }
+
+  $('modalDrink').addEventListener('click', () => {
+    overlay.classList.remove('show');
+    addWater(250);
+  });
+
+  $('modalSnooze').addEventListener('click', () => {
+    overlay.classList.remove('show');
+    state.nextReminder = Date.now() + 5 * 60000;
+    save();
+  });
+
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('show');
+  });
+
+  /* ===================== HORLOGE & BOUCLE ===================== */
+  const pad = n => String(n).padStart(2, '0');
+
+  function fmt(ms) {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    return pad(Math.floor(total / 60)) + ':' + pad(total % 60);
+  }
+
+  function tick() {
+    const now = new Date();
+    clockEl.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes());
+
+    if (state.remindersOn && state.nextReminder) {
+      const diff = state.nextReminder - Date.now();
+      if (diff <= 0) {
+        fireReminder();
+      } else {
+        countdown.innerHTML = 'Prochain rappel dans <b>' + fmt(diff) + '</b>';
+      }
+    } else if (!state.remindersOn) {
+      countdown.innerHTML = 'Rappels désactivés';
+    }
+  }
+
+  /* ===================== BULLES ===================== */
+  (function makeBubbles() {
+    const bg = $('bg');
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < 20; i++) {
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      const size = 6 + Math.random() * 28;
+      b.style.width = size + 'px';
+      b.style.height = size + 'px';
+      b.style.left = (Math.random() * 100) + '%';
+      b.style.animationDuration = (11 + Math.random() * 18) + 's';
+      b.style.animationDelay = (-Math.random() * 28) + 's';
+      b.style.opacity = (0.12 + Math.random() * 0.25).toFixed(2);
+      frag.appendChild(b);
+    }
+    bg.appendChild(frag);
+  })();
+
+  /* ===================== DÉMARRAGE ===================== */
+  load();
+  render();
+  updateNotifToggle();
+
+  // Débloque l'audio au premier clic n'importe où (politique navigateur)
+  document.addEventListener('pointerdown', function once() {
+    initAudio();
+    document.removeEventListener('pointerdown', once);
+  });
+
+  tick();
+  setInterval(tick, 1000);
+
+  // Vérifie le changement de jour toutes les 60 s
+  setInterval(() => {
+    if (state.day !== todayKey()) {
+      state.day = todayKey();
+      state.drunk = 0;
+      state.nextReminder = Date.now() + state.interval * 60000;
+      celebrated = false;
+      save();
+      render();
+    }
+  }, 60000);
+
+})();
+</script>
+</body>
+</html>
